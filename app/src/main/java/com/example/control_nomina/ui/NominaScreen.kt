@@ -1,62 +1,43 @@
 package com.example.control_nomina.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import com.example.control_nomina.Constants
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Text
-import android.content.Intent
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.List
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import android.content.Intent
+import com.example.control_nomina.Constants
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +47,11 @@ fun NominaScreen(viewModel: NominaViewModel, onNavigateToHistorial: () -> Unit, 
     val formatoMoneda = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
     formatoMoneda.maximumFractionDigits = 0
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -120,20 +105,34 @@ fun NominaScreen(viewModel: NominaViewModel, onNavigateToHistorial: () -> Unit, 
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HeaderSelector(state, viewModel)
-            TotalNetoCard(state, viewModel)
+            TotalNetoCard(
+                state = state,
+                viewModel = viewModel,
+                onGuardarClick = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("¡Nómina de ${state.mesAnio} guardada con éxito! 💾")
+                    }
+                }
+            )
             
             // Banners informativo de próximo cobro
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                modifier = Modifier.fillMaxWidth()
+            AnimatedVisibility(
+                visible = state.proximoCobroProyectado > 0,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
             ) {
-                Text(
-                    text = "Por cobrar el ${state.fechaProximoCobro} (horas extras de esta quincena): ${formatoMoneda.format(state.proximoCobroProyectado)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(12.dp)
-                )
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Por cobrar el ${state.fechaProximoCobro} (horas extras de esta quincena): ${formatoMoneda.format(state.proximoCobroProyectado)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
             }
 
             DesgloseGrid(state, viewModel)
@@ -221,7 +220,11 @@ fun HeaderSelector(state: NominaUiState, viewModel: NominaViewModel) {
 }
 
 @Composable
-fun TotalNetoCard(state: NominaUiState, viewModel: NominaViewModel) {
+fun TotalNetoCard(
+    state: NominaUiState,
+    viewModel: NominaViewModel,
+    onGuardarClick: () -> Unit
+) {
     val context = LocalContext.current
     val formatoMoneda = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
     formatoMoneda.maximumFractionDigits = 0
@@ -232,7 +235,7 @@ fun TotalNetoCard(state: NominaUiState, viewModel: NominaViewModel) {
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -240,29 +243,57 @@ fun TotalNetoCard(state: NominaUiState, viewModel: NominaViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Neto del pago del ${if (state.esPago15) "15" else "30"} de ${state.mesAnio.split(" ").firstOrNull() ?: "este mes"}",
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.labelLarge
                     )
-                    Text(
-                        text = formatoMoneda.format(state.granTotalNeto),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    AnimatedContent(
+                        targetState = state.granTotalNeto,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) + slideInVertically { it / 2 } togetherWith
+                            fadeOut(animationSpec = tween(300)) + slideOutVertically { -it / 2 }
+                        },
+                        label = "NetoAnimation"
+                    ) { targetNeto ->
+                        Text(
+                            text = formatoMoneda.format(targetNeto),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
                 
                 Button(
-                    onClick = { viewModel.guardarQuincena() },
-                    enabled = !state.isSaved
+                    onClick = {
+                        viewModel.guardarQuincena()
+                        onGuardarClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (state.isSaved) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                        contentColor = if (state.isSaved) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(if (state.isSaved) "Guardado" else "Guardar")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (state.isSaved) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Guardado", fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Guardar", fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             TextButton(
                 onClick = {
@@ -285,7 +316,7 @@ fun TotalNetoCard(state: NominaUiState, viewModel: NominaViewModel) {
                 },
                 modifier = Modifier.align(Alignment.End)
             ) {
-                Text("Compartir tirilla", color = Color(0xFFA1E085))
+                Text("Compartir tirilla", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -359,7 +390,16 @@ fun ResumenCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = titulo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(text = valor, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AnimatedContent(
+                targetState = valor,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(150)) + slideInVertically { it } togetherWith
+                    fadeOut(animationSpec = tween(150)) + slideOutVertically { -it }
+                },
+                label = "GridAnimation_$titulo"
+            ) { targetValor ->
+                Text(text = targetValor, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -428,6 +468,8 @@ fun InfoDetalleCard(state: NominaUiState) {
 
 @Composable
 fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
+    val focusManager = LocalFocusManager.current
+
     Column {
         Text("Configuración de Ingresos", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
@@ -435,14 +477,16 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.salarioMensualBase,
                 onValueChange = { viewModel.updateSalarioBase(it) },
                 label = { Text("Salario mensual ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
             OutlinedTextField(
                 value = state.bonificaciones,
                 onValueChange = { viewModel.updateBonificaciones(it) },
                 label = { Text("Bonificaciones ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -451,7 +495,8 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.otrasDeducciones,
                 onValueChange = { viewModel.updateOtrasDeducciones(it) },
                 label = { Text("Otras deducciones ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -472,14 +517,16 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.configDuracionTurno,
                 onValueChange = { viewModel.updateConfigTurno(it) },
                 label = { Text("Horas x Turno (ej. 9.15)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
             OutlinedTextField(
                 value = state.configDescansoMinutos,
                 onValueChange = { viewModel.updateConfigDescanso(it) },
                 label = { Text("Descanso (min)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -488,7 +535,8 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.configInicioNocturno,
                 onValueChange = { viewModel.updateConfigInicioNocturno(it) },
                 label = { Text("Hora inicio noche (0-23)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -521,11 +569,13 @@ fun HorasTrabajadasForm(state: NominaUiState, viewModel: NominaViewModel) {
 
 @Composable
 fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val focusManager = LocalFocusManager.current
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
         modifier = modifier
     )
 }

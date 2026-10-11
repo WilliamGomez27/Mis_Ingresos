@@ -28,29 +28,42 @@ class NominaViewModel(
     private var turnosJob: Job? = null
 
     init {
-        cargarEstadoGuardado()
+        val (mesInicial, pago15Inicial) = cargarUltimaQuincenaSeleccionada()
+        cargarEstadoParaQuincena(mesInicial, pago15Inicial)
         loadTurnos()
         recalcularNomina()
     }
 
-    private fun cargarEstadoGuardado() {
-        if (prefs == null) return
-        val mesAnio = prefs.getString("mesAnio", "Julio de 2026") ?: "Julio de 2026"
-        val esPago15 = prefs.getBoolean("esPago15", true)
-        val salario = prefs.getString("salarioMensualBase", Constants.SALARIO_MINIMO_2026.toInt().toString()) ?: Constants.SALARIO_MINIMO_2026.toInt().toString()
-        val bonos = prefs.getString("bonificaciones", "0") ?: "0"
-        val otrasDed = prefs.getString("otrasDeducciones", "0") ?: "0"
-        val duracionTurno = prefs.getString("configDuracionTurno", "9.15") ?: "9.15"
-        val descansoMin = prefs.getString("configDescansoMinutos", "30") ?: "30"
-        val inicioNocturno = prefs.getString("configInicioNocturno", "20") ?: "20"
+    private fun cargarUltimaQuincenaSeleccionada(): Pair<String, Boolean> {
+        if (prefs == null) return Pair("Julio de 2026", true)
+        val mes = prefs.getString("ultimo_mesAnio", "Julio de 2026") ?: "Julio de 2026"
+        val p15 = prefs.getBoolean("ultimo_esPago15", true)
+        return Pair(mes, p15)
+    }
+
+    private fun cargarEstadoParaQuincena(mesAnio: String, esPago15: Boolean) {
+        val prefix = "${mesAnio}_${esPago15}"
+        if (prefs == null) {
+            _uiState.update { it.copy(mesAnio = mesAnio, esPago15 = esPago15) }
+            return
+        }
+
+        val globalSalario = prefs.getString("global_salarioMensualBase", Constants.SALARIO_MINIMO_2026.toInt().toString())
+        val salario = prefs.getString("${prefix}_salarioMensualBase", globalSalario) ?: Constants.SALARIO_MINIMO_2026.toInt().toString()
+        val bonos = prefs.getString("${prefix}_bonificaciones", "0") ?: "0"
+        val otrasDed = prefs.getString("${prefix}_otrasDeducciones", "0") ?: "0"
         
-        val heDiurna = prefs.getString("horasExtraDiurna", "") ?: ""
-        val heNocturna = prefs.getString("horasExtraNocturna", "") ?: ""
-        val heDiurnaFest = prefs.getString("horasExtraDiurnaDomFest", "") ?: ""
-        val heNocturnaFest = prefs.getString("horasExtraNocturnaDomFest", "") ?: ""
-        val recNocturno = prefs.getString("recargoNocturno", "") ?: ""
-        val recFest = prefs.getString("recargoDomFest", "") ?: ""
-        val recNoctFest = prefs.getString("recargoNocturnoDomFest", "") ?: ""
+        val duracionTurno = prefs.getString("${prefix}_configDuracionTurno", "9.15") ?: "9.15"
+        val descansoMin = prefs.getString("${prefix}_configDescansoMinutos", "30") ?: "30"
+        val inicioNocturno = prefs.getString("${prefix}_configInicioNocturno", "20") ?: "20"
+        
+        val heDiurna = prefs.getString("${prefix}_horasExtraDiurna", "") ?: ""
+        val heNocturna = prefs.getString("${prefix}_horasExtraNocturna", "") ?: ""
+        val heDiurnaFest = prefs.getString("${prefix}_horasExtraDiurnaDomFest", "") ?: ""
+        val heNocturnaFest = prefs.getString("${prefix}_horasExtraNocturnaDomFest", "") ?: ""
+        val recNocturno = prefs.getString("${prefix}_recargoNocturno", "") ?: ""
+        val recFest = prefs.getString("${prefix}_recargoDomFest", "") ?: ""
+        val recNoctFest = prefs.getString("${prefix}_recargoNocturnoDomFest", "") ?: ""
 
         _uiState.update {
             it.copy(
@@ -68,7 +81,8 @@ class NominaViewModel(
                 horasExtraNocturnaDomFest = heNocturnaFest,
                 recargoNocturno = recNocturno,
                 recargoDomFest = recFest,
-                recargoNocturnoDomFest = recNoctFest
+                recargoNocturnoDomFest = recNoctFest,
+                isSaved = false
             )
         }
     }
@@ -76,22 +90,25 @@ class NominaViewModel(
     private fun guardarEstadoActual() {
         if (prefs == null) return
         val state = _uiState.value
+        val prefix = "${state.mesAnio}_${state.esPago15}"
+
         prefs.edit()
-            .putString("mesAnio", state.mesAnio)
-            .putBoolean("esPago15", state.esPago15)
-            .putString("salarioMensualBase", state.salarioMensualBase)
-            .putString("bonificaciones", state.bonificaciones)
-            .putString("otrasDeducciones", state.otrasDeducciones)
-            .putString("configDuracionTurno", state.configDuracionTurno)
-            .putString("configDescansoMinutos", state.configDescansoMinutos)
-            .putString("configInicioNocturno", state.configInicioNocturno)
-            .putString("horasExtraDiurna", state.horasExtraDiurna)
-            .putString("horasExtraNocturna", state.horasExtraNocturna)
-            .putString("horasExtraDiurnaDomFest", state.horasExtraDiurnaDomFest)
-            .putString("horasExtraNocturnaDomFest", state.horasExtraNocturnaDomFest)
-            .putString("recargoNocturno", state.recargoNocturno)
-            .putString("recargoDomFest", state.recargoDomFest)
-            .putString("recargoNocturnoDomFest", state.recargoNocturnoDomFest)
+            .putString("ultimo_mesAnio", state.mesAnio)
+            .putBoolean("ultimo_esPago15", state.esPago15)
+            .putString("${prefix}_salarioMensualBase", state.salarioMensualBase)
+            .putString("global_salarioMensualBase", state.salarioMensualBase)
+            .putString("${prefix}_bonificaciones", state.bonificaciones)
+            .putString("${prefix}_otrasDeducciones", state.otrasDeducciones)
+            .putString("${prefix}_configDuracionTurno", state.configDuracionTurno)
+            .putString("${prefix}_configDescansoMinutos", state.configDescansoMinutos)
+            .putString("${prefix}_configInicioNocturno", state.configInicioNocturno)
+            .putString("${prefix}_horasExtraDiurna", state.horasExtraDiurna)
+            .putString("${prefix}_horasExtraNocturna", state.horasExtraNocturna)
+            .putString("${prefix}_horasExtraDiurnaDomFest", state.horasExtraDiurnaDomFest)
+            .putString("${prefix}_horasExtraNocturnaDomFest", state.horasExtraNocturnaDomFest)
+            .putString("${prefix}_recargoNocturno", state.recargoNocturno)
+            .putString("${prefix}_recargoDomFest", state.recargoDomFest)
+            .putString("${prefix}_recargoNocturnoDomFest", state.recargoNocturnoDomFest)
             .apply()
     }
 
@@ -139,14 +156,14 @@ class NominaViewModel(
     // --- Funciones para actualizar Inputs ---
     
     fun updateMesAnio(mes: String) {
-        _uiState.update { it.copy(mesAnio = mes, isSaved = false) }
         guardarEstadoActual()
+        cargarEstadoParaQuincena(mes, _uiState.value.esPago15)
         loadTurnos()
     }
     
     fun setQuincena(esPago15: Boolean) {
-        _uiState.update { it.copy(esPago15 = esPago15, isSaved = false) }
         guardarEstadoActual()
+        cargarEstadoParaQuincena(_uiState.value.mesAnio, esPago15)
         loadTurnos()
     }
 

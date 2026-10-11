@@ -3,7 +3,7 @@ package com.example.control_nomina
 object Constants {
     // Valores Legales Colombia (Proyección 2026 referencial)
     const val SALARIO_MINIMO_2026 = 1750905.0
-    const val AUXILIO_TRANSPORTE_2026 = 124548.0
+    const val AUXILIO_TRANSPORTE_2026 = 249095.0
     
     // Jornada laboral
     const val HORAS_SEMANALES = 42
