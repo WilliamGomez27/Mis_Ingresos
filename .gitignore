@@ -1,15 +1,27 @@
 *.iml
 .gradle
 /local.properties
+local.properties
+
+# Google Services / Sensitive Credentials
+google-services.json
+**/google-services.json
+
+# Android Studio & IDEA
+/.idea/
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
+
+# Build outputs & caches
 /build
+app/build/
+*.apk
+*.aab
+.DS_Store
 /captures
 .externalNativeBuild
 .cxx
-local.properties

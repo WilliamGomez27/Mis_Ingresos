@@ -21,6 +21,7 @@ import com.example.control_nomina.ui.MallaTurnosScreen
 import com.example.control_nomina.ui.NominaViewModel
 import com.example.control_nomina.ui.theme.Control_nominaTheme
 
+import android.content.Context
 import android.os.Build
 
 class MainActivity : ComponentActivity() {
@@ -31,16 +32,17 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         
-        // Inicializar base de datos
+        // Inicializar base de datos y preferencias
         val database = NominaDatabase.getDatabase(this)
         val dao = database.nominaDao()
+        val prefs = getSharedPreferences("control_nomina_prefs", Context.MODE_PRIVATE)
         
-        // Factory manual básico para pasar el DAO al ViewModel sin usar Hilt/Dagger
+        // Factory manual básico para pasar el DAO y SharedPreferences al ViewModel
         val factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(NominaViewModel::class.java)) {
                     @Suppress("UNCHECKED_CAST")
-                    return NominaViewModel(dao) as T
+                    return NominaViewModel(dao, prefs) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }

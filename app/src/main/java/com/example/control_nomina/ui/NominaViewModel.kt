@@ -12,9 +12,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import java.util.Calendar
+import android.content.SharedPreferences
 import com.example.control_nomina.data.TurnoRecord
 
-class NominaViewModel(private val nominaDao: NominaDao) : ViewModel() {
+class NominaViewModel(
+    private val nominaDao: NominaDao,
+    private val prefs: SharedPreferences? = null
+) : ViewModel() {
     private val _uiState = MutableStateFlow(NominaUiState())
     val uiState: StateFlow<NominaUiState> = _uiState.asStateFlow()
     
@@ -24,8 +28,71 @@ class NominaViewModel(private val nominaDao: NominaDao) : ViewModel() {
     private var turnosJob: Job? = null
 
     init {
+        cargarEstadoGuardado()
         loadTurnos()
         recalcularNomina()
+    }
+
+    private fun cargarEstadoGuardado() {
+        if (prefs == null) return
+        val mesAnio = prefs.getString("mesAnio", "Julio de 2026") ?: "Julio de 2026"
+        val esPago15 = prefs.getBoolean("esPago15", true)
+        val salario = prefs.getString("salarioMensualBase", Constants.SALARIO_MINIMO_2026.toInt().toString()) ?: Constants.SALARIO_MINIMO_2026.toInt().toString()
+        val bonos = prefs.getString("bonificaciones", "0") ?: "0"
+        val otrasDed = prefs.getString("otrasDeducciones", "0") ?: "0"
+        val duracionTurno = prefs.getString("configDuracionTurno", "9.15") ?: "9.15"
+        val descansoMin = prefs.getString("configDescansoMinutos", "30") ?: "30"
+        val inicioNocturno = prefs.getString("configInicioNocturno", "20") ?: "20"
+        
+        val heDiurna = prefs.getString("horasExtraDiurna", "") ?: ""
+        val heNocturna = prefs.getString("horasExtraNocturna", "") ?: ""
+        val heDiurnaFest = prefs.getString("horasExtraDiurnaDomFest", "") ?: ""
+        val heNocturnaFest = prefs.getString("horasExtraNocturnaDomFest", "") ?: ""
+        val recNocturno = prefs.getString("recargoNocturno", "") ?: ""
+        val recFest = prefs.getString("recargoDomFest", "") ?: ""
+        val recNoctFest = prefs.getString("recargoNocturnoDomFest", "") ?: ""
+
+        _uiState.update {
+            it.copy(
+                mesAnio = mesAnio,
+                esPago15 = esPago15,
+                salarioMensualBase = salario,
+                bonificaciones = bonos,
+                otrasDeducciones = otrasDed,
+                configDuracionTurno = duracionTurno,
+                configDescansoMinutos = descansoMin,
+                configInicioNocturno = inicioNocturno,
+                horasExtraDiurna = heDiurna,
+                horasExtraNocturna = heNocturna,
+                horasExtraDiurnaDomFest = heDiurnaFest,
+                horasExtraNocturnaDomFest = heNocturnaFest,
+                recargoNocturno = recNocturno,
+                recargoDomFest = recFest,
+                recargoNocturnoDomFest = recNoctFest
+            )
+        }
+    }
+
+    private fun guardarEstadoActual() {
+        if (prefs == null) return
+        val state = _uiState.value
+        prefs.edit()
+            .putString("mesAnio", state.mesAnio)
+            .putBoolean("esPago15", state.esPago15)
+            .putString("salarioMensualBase", state.salarioMensualBase)
+            .putString("bonificaciones", state.bonificaciones)
+            .putString("otrasDeducciones", state.otrasDeducciones)
+            .putString("configDuracionTurno", state.configDuracionTurno)
+            .putString("configDescansoMinutos", state.configDescansoMinutos)
+            .putString("configInicioNocturno", state.configInicioNocturno)
+            .putString("horasExtraDiurna", state.horasExtraDiurna)
+            .putString("horasExtraNocturna", state.horasExtraNocturna)
+            .putString("horasExtraDiurnaDomFest", state.horasExtraDiurnaDomFest)
+            .putString("horasExtraNocturnaDomFest", state.horasExtraNocturnaDomFest)
+            .putString("recargoNocturno", state.recargoNocturno)
+            .putString("recargoDomFest", state.recargoDomFest)
+            .putString("recargoNocturnoDomFest", state.recargoNocturnoDomFest)
+            .apply()
     }
 
     private fun loadTurnos() {
@@ -43,42 +110,48 @@ class NominaViewModel(private val nominaDao: NominaDao) : ViewModel() {
     
     fun updateMesAnio(mes: String) {
         _uiState.update { it.copy(mesAnio = mes, isSaved = false) }
+        guardarEstadoActual()
         loadTurnos()
     }
     
     fun setQuincena(esPago15: Boolean) {
         _uiState.update { it.copy(esPago15 = esPago15, isSaved = false) }
+        guardarEstadoActual()
         loadTurnos()
     }
 
     fun updateSalarioBase(salario: String) {
         _uiState.update { it.copy(salarioMensualBase = salario, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateBonificaciones(bonos: String) {
         _uiState.update { it.copy(bonificaciones = bonos, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateConfigTurno(turno: String) {
         _uiState.update { it.copy(configDuracionTurno = turno, isSaved = false) }
+        guardarEstadoActual()
         recalcularHorasDeTurnos()
         recalcularNomina()
     }
 
     fun updateConfigDescanso(descanso: String) {
         _uiState.update { it.copy(configDescansoMinutos = descanso, isSaved = false) }
+        guardarEstadoActual()
         recalcularHorasDeTurnos()
         recalcularNomina()
     }
 
     fun updateConfigInicioNocturno(hora: String) {
         _uiState.update { it.copy(configInicioNocturno = hora, isSaved = false) }
+        guardarEstadoActual()
         recalcularHorasDeTurnos()
         recalcularNomina()
     }
-
 
     fun setSelectedTab(tab: String) {
         _uiState.update { it.copy(selectedTab = tab) }
@@ -86,41 +159,49 @@ class NominaViewModel(private val nominaDao: NominaDao) : ViewModel() {
 
     fun updateOtrasDeducciones(deducciones: String) {
         _uiState.update { it.copy(otrasDeducciones = deducciones, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateHorasExtraDiurna(horas: String) {
         _uiState.update { it.copy(horasExtraDiurna = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateHorasExtraNocturna(horas: String) {
         _uiState.update { it.copy(horasExtraNocturna = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateHorasExtraDiurnaDomFest(horas: String) {
         _uiState.update { it.copy(horasExtraDiurnaDomFest = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateHorasExtraNocturnaDomFest(horas: String) {
         _uiState.update { it.copy(horasExtraNocturnaDomFest = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateRecargoNocturno(horas: String) {
         _uiState.update { it.copy(recargoNocturno = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateRecargoDomFest(horas: String) {
         _uiState.update { it.copy(recargoDomFest = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
     fun updateRecargoNocturnoDomFest(horas: String) {
         _uiState.update { it.copy(recargoNocturnoDomFest = horas, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
