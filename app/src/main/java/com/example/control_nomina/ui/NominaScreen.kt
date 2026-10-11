@@ -128,7 +128,7 @@ fun NominaScreen(viewModel: NominaViewModel, onNavigateToHistorial: () -> Unit, 
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Por cobrar el ${state.fechaProximoCobro} (horas extras de esta quincena): ${formatoMoneda.format(state.proximoCobroProyectado)}",
+                    text = "Recargo del ${if (state.esPago15) "1 al 15" else "16 al 30"}, se liquida el ${state.fechaProximoCobro} (horas extras de esta quincena): ${formatoMoneda.format(state.proximoCobroProyectado)}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
