@@ -2,21 +2,35 @@ package com.example.control_nomina.ui
 
 import com.example.control_nomina.Constants
 import com.example.control_nomina.data.FakeNominaDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NominaViewModelTest {
 
     private lateinit var fakeDao: FakeNominaDao
     private lateinit var viewModel: NominaViewModel
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         fakeDao = FakeNominaDao()
         viewModel = NominaViewModel(fakeDao)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
     }
 
     @Test
