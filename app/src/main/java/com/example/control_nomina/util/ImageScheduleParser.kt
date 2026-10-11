@@ -13,35 +13,44 @@ data class ParsedShift(
 
 object ImageScheduleParser {
 
-    private val shiftRegex = Regex("""(\d{1,2}:\d{2})\s*-\s*(\d{1,2})(?::(\d{2}))?""")
-    private val dayRegex = Regex("""^\b([1-9]|[12][0-9]|3[01])\b$""")
+    // Soporta variantes de OCR: "20:30-14", "20.30-14", "20;30-14", "20:30-14:00", "04:00-14", etc.
+    private val shiftRegex = Regex("""(\d{1,2})[:.,;](\d{2})\s*[-~—–]?\s*(\d{1,2})(?:[:.,;](\d{2}))?""")
+    private val dayRegex = Regex("""\b([1-9]|[12][0-9]|3[01])\b""")
 
     fun parseCalendarImage(ocrText: Text, yearMonthPrefix: String): List<ParsedShift> {
         val dayElements = mutableListOf<DayElement>()
         val shiftElements = mutableListOf<ShiftElement>()
 
-        // 1. Recolectar todos los números de día y turnos con sus coordenadas (BoundingBox)
+        // 1. Analizar bloques y líneas
         for (block in ocrText.textBlocks) {
             for (line in block.lines) {
                 val text = line.text.trim()
-                val box = line.boundingBox ?: continue
+                val box = line.boundingBox ?: Rect(0, 0, 0, 0)
 
-                // Verificar si es un número de día (1 al 31)
-                val dayMatch = dayRegex.find(text)
-                if (dayMatch != null) {
-                    val dayNum = dayMatch.groupValues[1].toInt()
-                    dayElements.add(DayElement(dayNum, box))
-                    continue
-                }
-
-                // Verificar si es un turno (ej: "20:30-14" o "19:30-14:00")
+                // Buscar patrón de turno en esta línea
                 val shiftMatch = shiftRegex.find(text)
                 if (shiftMatch != null) {
-                    val ent = shiftMatch.groupValues[1]
-                    val sHour = shiftMatch.groupValues[2].padStart(2, '0')
-                    val sMin = shiftMatch.groupValues[3].ifEmpty { "00" }
+                    val hEnt = shiftMatch.groupValues[1].padStart(2, '0')
+                    val mEnt = shiftMatch.groupValues[2].padStart(2, '0')
+                    val ent = "$hEnt:$mEnt"
+
+                    val sHour = shiftMatch.groupValues[3].padStart(2, '0')
+                    val sMin = shiftMatch.groupValues[4].ifEmpty { "00" }.padStart(2, '0')
                     val sal = "$sHour:$sMin"
+
                     shiftElements.add(ShiftElement(ent, sal, box))
+                }
+
+                // Buscar número(s) de día (1 al 31) en la línea
+                dayRegex.findAll(text).forEach { dayMatch ->
+                    val dayNum = dayMatch.groupValues[1].toIntOrNull()
+                    if (dayNum != null && dayNum in 1..31) {
+                        // Evitar tomar las horas (20, 30, 14, 04) como días si forman parte del turno
+                        val isPartOfShiftTime = shiftMatch != null && shiftMatch.value.contains(dayMatch.value)
+                        if (!isPartOfShiftTime) {
+                            dayElements.add(DayElement(dayNum, box))
+                        }
+                    }
                 }
             }
         }
@@ -66,20 +75,25 @@ object ImageScheduleParser {
             }
         }
 
-        // Si la detección espacial no emparejó suficientes, intentar emparejamiento por secuencia
-        if (result.isEmpty() && shiftElements.isNotEmpty()) {
-            shiftElements.forEachIndexed { index, shift ->
-                val dayNum = index + 1
-                if (dayNum <= 31) {
-                    val fechaStr = String.format(Locale.getDefault(), "%s-%02d", yearMonthPrefix, dayNum)
-                    result.add(
-                        ParsedShift(
-                            day = dayNum,
-                            entrada = shift.entrada,
-                            salida = shift.salida,
-                            esFestivo = FestivosColombia.esDomingoOFestivo(fechaStr)
+        // 3. Fallback: Si no se emparejaron por coordenadas, usar secuencia ordenada espacialmente
+        if (result.size < shiftElements.size) {
+            val sortedShifts = shiftElements.sortedWith(compareBy({ it.box.top / 150 }, { it.box.left }))
+            val sortedDays = dayElements.distinctBy { it.day }.sortedBy { it.day }
+
+            if (sortedDays.isNotEmpty()) {
+                sortedShifts.forEach { shift ->
+                    val closestDay = findClosestDayForShift(shift, sortedDays)
+                    if (closestDay != null && result.none { it.day == closestDay.day }) {
+                        val fechaStr = String.format(Locale.getDefault(), "%s-%02d", yearMonthPrefix, closestDay.day)
+                        result.add(
+                            ParsedShift(
+                                day = closestDay.day,
+                                entrada = shift.entrada,
+                                salida = shift.salida,
+                                esFestivo = FestivosColombia.esDomingoOFestivo(fechaStr)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -92,16 +106,16 @@ object ImageScheduleParser {
         var minDistance = Double.MAX_VALUE
 
         for (day in days) {
-            // Un número de día en calendario suele estar arriba/izquierda o dentro de la misma celda
             val dx = (shift.box.centerX() - day.box.centerX()).toDouble()
             val dy = (shift.box.centerY() - day.box.centerY()).toDouble()
             
-            // Si el número está muy por debajo del turno, no pertenece a ese día
-            if (dy < -100) continue
+            // Un número de día en el calendario siempre está arriba de la casilla del turno
+            if (dy < -50) continue
 
-            val distance = Math.hypot(dx, dy)
-            if (distance < minDistance && distance < 350) { // Distancia máxima en píxeles de celda
-                minDistance = distance
+            // Ponderar la alineación horizontal de la columna
+            val weightedDistance = Math.hypot(dx * 1.8, dy)
+            if (weightedDistance < minDistance) {
+                minDistance = weightedDistance
                 closest = day
             }
         }
