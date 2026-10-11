@@ -381,18 +381,18 @@ fun InfoDetalleCard(state: NominaUiState) {
         )
         "extra" -> Pair(
             "Horas extra",
-            "Detalle de horas extra calculadas en esta quincena:\n" +
-            "• Diurna (+25%): ${formatoMoneda.format(((state.horasExtraDiurna.toDoubleOrNull() ?: 0.0) + state.calcExtraDiurnaTurnos) * valorHora * Constants.FACTOR_EXTRA_DIURNA)}\n" +
-            "• Nocturna (+75%): ${formatoMoneda.format(((state.horasExtraNocturna.toDoubleOrNull() ?: 0.0) + state.calcExtraNocturnaTurnos) * valorHora * Constants.FACTOR_EXTRA_NOCTURNA)}\n" +
-            "• Diurna Dom./Fest. (+100%): ${formatoMoneda.format(((state.horasExtraDiurnaDomFest.toDoubleOrNull() ?: 0.0) + state.calcExtraDiurnaDomFestTurnos) * valorHora * Constants.FACTOR_EXTRA_DIURNA_DOM_FEST)}\n" +
-            "• Nocturna Dom./Fest. (+150%): ${formatoMoneda.format(((state.horasExtraNocturnaDomFest.toDoubleOrNull() ?: 0.0) + state.calcExtraNocturnaDomFestTurnos) * valorHora * Constants.FACTOR_EXTRA_NOCTURNA_DOM_FEST)}"
+            "Quincena Vencida: Hoy se liquidan las horas trabajadas del ${state.quincenaAnteriorNombre}.\n" +
+            "• Diurna (+25%): ${formatoMoneda.format(((state.horasExtraDiurna.toDoubleOrNull() ?: 0.0) + state.cobroExtraDiurnaTurnos) * valorHora * Constants.FACTOR_EXTRA_DIURNA)}\n" +
+            "• Nocturna (+75%): ${formatoMoneda.format(((state.horasExtraNocturna.toDoubleOrNull() ?: 0.0) + state.cobroExtraNocturnaTurnos) * valorHora * Constants.FACTOR_EXTRA_NOCTURNA)}\n" +
+            "• Diurna Dom./Fest. (+100%): ${formatoMoneda.format(((state.horasExtraDiurnaDomFest.toDoubleOrNull() ?: 0.0) + state.cobroExtraDiurnaDomFestTurnos) * valorHora * Constants.FACTOR_EXTRA_DIURNA_DOM_FEST)}\n" +
+            "• Nocturna Dom./Fest. (+150%): ${formatoMoneda.format(((state.horasExtraNocturnaDomFest.toDoubleOrNull() ?: 0.0) + state.cobroExtraNocturnaDomFestTurnos) * valorHora * Constants.FACTOR_EXTRA_NOCTURNA_DOM_FEST)}"
         )
         "recargo" -> Pair(
             "Recargos",
-            "Detalle de recargos calculados en esta quincena:\n" +
-            "• Nocturno (+35%): ${formatoMoneda.format(((state.recargoNocturno.toDoubleOrNull() ?: 0.0) + state.calcRecargoNocturnoTurnos) * valorHora * Constants.FACTOR_RECARGO_NOCTURNO)}\n" +
-            "• Dom./Festivo (+75%): ${formatoMoneda.format(((state.recargoDomFest.toDoubleOrNull() ?: 0.0) + state.calcRecargoDomFestTurnos) * valorHora * Constants.FACTOR_RECARGO_DOM_FEST)}\n" +
-            "• Nocturno Dom./Fest. (+110%): ${formatoMoneda.format(((state.recargoNocturnoDomFest.toDoubleOrNull() ?: 0.0) + state.calcRecargoNocturnoDomFestTurnos) * valorHora * Constants.FACTOR_RECARGO_NOCTURNO_DOM_FEST)}"
+            "Quincena Vencida: Hoy se liquidan los recargos del ${state.quincenaAnteriorNombre}.\n" +
+            "• Nocturno (+35%): ${formatoMoneda.format(((state.recargoNocturno.toDoubleOrNull() ?: 0.0) + state.cobroRecargoNocturnoTurnos) * valorHora * Constants.FACTOR_RECARGO_NOCTURNO)}\n" +
+            "• Dom./Festivo (+75%): ${formatoMoneda.format(((state.recargoDomFest.toDoubleOrNull() ?: 0.0) + state.cobroRecargoDomFestTurnos) * valorHora * Constants.FACTOR_RECARGO_DOM_FEST)}\n" +
+            "• Nocturno Dom./Fest. (+110%): ${formatoMoneda.format(((state.recargoNocturnoDomFest.toDoubleOrNull() ?: 0.0) + state.cobroRecargoNocturnoDomFestTurnos) * valorHora * Constants.FACTOR_RECARGO_NOCTURNO_DOM_FEST)}"
         )
         "aux" -> Pair(
             "Auxilio de transporte",

@@ -98,12 +98,42 @@ class NominaViewModel(
     private fun loadTurnos() {
         turnosJob?.cancel()
         turnosJob = viewModelScope.launch {
-            nominaDao.getTurnosPorQuincena(_uiState.value.mesAnio, _uiState.value.esPago15).collect { turnos ->
-                _uiState.update { it.copy(turnosActuales = turnos) }
-                recalcularHorasDeTurnos()
-                recalcularNomina()
+            val state = _uiState.value
+            val (mesAnt, pago15Ant) = obtenerQuincenaAnterior(state.mesAnio, state.esPago15)
+            val nombreAnt = "${if (pago15Ant) "15" else "30"} de $mesAnt"
+
+            // Escuchar turnos quincena actual (Malla)
+            nominaDao.getTurnosPorQuincena(state.mesAnio, state.esPago15).collect { turnosActuales ->
+                // Escuchar turnos quincena anterior (A Cobrar Hoy por Quincena Vencida)
+                nominaDao.getTurnosPorQuincena(mesAnt, pago15Ant).collect { turnosAnteriores ->
+                    _uiState.update { 
+                        it.copy(
+                            turnosActuales = turnosActuales,
+                            turnosQuincenaAnterior = turnosAnteriores,
+                            quincenaAnteriorNombre = nombreAnt
+                        ) 
+                    }
+                    recalcularHorasDeTurnos()
+                    recalcularNomina()
+                }
             }
         }
+    }
+
+    private fun obtenerQuincenaAnterior(mesAnio: String, esPago15: Boolean): Pair<String, Boolean> {
+        val meses = listOf(
+            "Enero de 2026", "Febrero de 2026", "Marzo de 2026", "Abril de 2026",
+            "Mayo de 2026", "Junio de 2026", "Julio de 2026", "Agosto de 2026",
+            "Septiembre de 2026", "Octubre de 2026", "Noviembre de 2026", "Diciembre de 2026"
+        )
+        if (!esPago15) {
+            // Si pagamos el 30, las extras a cobrar son las del 1 al 15 de este mismo mes
+            return Pair(mesAnio, true)
+        }
+        // Si pagamos el 15, las extras a cobrar son las del 16 al 30 del mes anterior
+        val index = meses.indexOf(mesAnio)
+        val prevIndex = if (index > 0) index - 1 else 11
+        return Pair(meses[prevIndex], false)
     }
 
     // --- Funciones para actualizar Inputs ---
@@ -212,6 +242,7 @@ class NominaViewModel(
         val configDescanso = state.configDescansoMinutos.toIntOrNull() ?: 30
         val configNocturno = state.configInicioNocturno.toIntOrNull() ?: 20
 
+        // 1. Proyectadas (Malla Quincena Actual)
         var heDiurna = 0.0
         var heNocturna = 0.0
         var heDiurnaFest = 0.0
@@ -231,6 +262,26 @@ class NominaViewModel(
             recNoctFest += h["rec_noct_fest"] ?: 0.0
         }
 
+        // 2. A Cobrar Hoy (Turnos Quincena Anterior por Quincena Vencida)
+        var cobroHeDiurna = 0.0
+        var cobroHeNocturna = 0.0
+        var cobroHeDiurnaFest = 0.0
+        var cobroHeNocturnaFest = 0.0
+        var cobroRecNocturno = 0.0
+        var cobroRecFest = 0.0
+        var cobroRecNoctFest = 0.0
+
+        for (turno in state.turnosQuincenaAnterior) {
+            val h = clasificarTurno(turno, configTurno, configDescanso, configNocturno)
+            cobroHeDiurna += h["he_diurna"] ?: 0.0
+            cobroHeNocturna += h["he_nocturna"] ?: 0.0
+            cobroHeDiurnaFest += h["he_diurna_fest"] ?: 0.0
+            cobroHeNocturnaFest += h["he_nocturna_fest"] ?: 0.0
+            cobroRecNocturno += h["rec_nocturno"] ?: 0.0
+            cobroRecFest += h["rec_festivo"] ?: 0.0
+            cobroRecNoctFest += h["rec_noct_fest"] ?: 0.0
+        }
+
         _uiState.update {
             it.copy(
                 calcExtraDiurnaTurnos = heDiurna,
@@ -239,7 +290,15 @@ class NominaViewModel(
                 calcExtraNocturnaDomFestTurnos = heNocturnaFest,
                 calcRecargoNocturnoTurnos = recNocturno,
                 calcRecargoDomFestTurnos = recFest,
-                calcRecargoNocturnoDomFestTurnos = recNoctFest
+                calcRecargoNocturnoDomFestTurnos = recNoctFest,
+                
+                cobroExtraDiurnaTurnos = cobroHeDiurna,
+                cobroExtraNocturnaTurnos = cobroHeNocturna,
+                cobroExtraDiurnaDomFestTurnos = cobroHeDiurnaFest,
+                cobroExtraNocturnaDomFestTurnos = cobroHeNocturnaFest,
+                cobroRecargoNocturnoTurnos = cobroRecNocturno,
+                cobroRecargoDomFestTurnos = cobroRecFest,
+                cobroRecargoNocturnoDomFestTurnos = cobroRecNoctFest
             )
         }
     }
@@ -330,29 +389,29 @@ class NominaViewModel(
         val valorHoraOrdinaria = salarioMensual / Constants.HORAS_MENSUALES
         val bonificaciones = state.bonificaciones.toDoubleOrNull() ?: 0.0
         
-        // 1. Horas Extra (Afectan base cotizable) -> Suma manuales + calculadas de turnos
+        // 1. Horas Extra A Cobrar Hoy (Suma manuales + turnos quincena anterior)
         var totalExtra = 0.0
-        val horasExtraDiurnaTotal = (state.horasExtraDiurna.toDoubleOrNull() ?: 0.0) + state.calcExtraDiurnaTurnos
-        val horasExtraNocturnaTotal = (state.horasExtraNocturna.toDoubleOrNull() ?: 0.0) + state.calcExtraNocturnaTurnos
-        val horasExtraDiurnaDomFestTotal = (state.horasExtraDiurnaDomFest.toDoubleOrNull() ?: 0.0) + state.calcExtraDiurnaDomFestTurnos
-        val horasExtraNocturnaDomFestTotal = (state.horasExtraNocturnaDomFest.toDoubleOrNull() ?: 0.0) + state.calcExtraNocturnaDomFestTurnos
+        val horasExtraDiurnaTotal = (state.horasExtraDiurna.toDoubleOrNull() ?: 0.0) + state.cobroExtraDiurnaTurnos
+        val horasExtraNocturnaTotal = (state.horasExtraNocturna.toDoubleOrNull() ?: 0.0) + state.cobroExtraNocturnaTurnos
+        val horasExtraDiurnaDomFestTotal = (state.horasExtraDiurnaDomFest.toDoubleOrNull() ?: 0.0) + state.cobroExtraDiurnaDomFestTurnos
+        val horasExtraNocturnaDomFestTotal = (state.horasExtraNocturnaDomFest.toDoubleOrNull() ?: 0.0) + state.cobroExtraNocturnaDomFestTurnos
 
         totalExtra += horasExtraDiurnaTotal * valorHoraOrdinaria * Constants.FACTOR_EXTRA_DIURNA
         totalExtra += horasExtraNocturnaTotal * valorHoraOrdinaria * Constants.FACTOR_EXTRA_NOCTURNA
         totalExtra += horasExtraDiurnaDomFestTotal * valorHoraOrdinaria * Constants.FACTOR_EXTRA_DIURNA_DOM_FEST
         totalExtra += horasExtraNocturnaDomFestTotal * valorHoraOrdinaria * Constants.FACTOR_EXTRA_NOCTURNA_DOM_FEST
 
-        // 2. Recargos (Afectan base cotizable) -> Suma manuales + calculados de turnos
+        // 2. Recargos A Cobrar Hoy (Suma manuales + turnos quincena anterior)
         var totalRecargos = 0.0
-        val recargoNocturnoTotal = (state.recargoNocturno.toDoubleOrNull() ?: 0.0) + state.calcRecargoNocturnoTurnos
-        val recargoDomFestTotal = (state.recargoDomFest.toDoubleOrNull() ?: 0.0) + state.calcRecargoDomFestTurnos
-        val recargoNocturnoDomFestTotal = (state.recargoNocturnoDomFest.toDoubleOrNull() ?: 0.0) + state.calcRecargoNocturnoDomFestTurnos
+        val recargoNocturnoTotal = (state.recargoNocturno.toDoubleOrNull() ?: 0.0) + state.cobroRecargoNocturnoTurnos
+        val recargoDomFestTotal = (state.recargoDomFest.toDoubleOrNull() ?: 0.0) + state.cobroRecargoDomFestTurnos
+        val recargoNocturnoDomFestTotal = (state.recargoNocturnoDomFest.toDoubleOrNull() ?: 0.0) + state.cobroRecargoNocturnoDomFestTurnos
 
         totalRecargos += recargoNocturnoTotal * valorHoraOrdinaria * Constants.FACTOR_RECARGO_NOCTURNO
         totalRecargos += recargoDomFestTotal * valorHoraOrdinaria * Constants.FACTOR_RECARGO_DOM_FEST
         totalRecargos += recargoNocturnoDomFestTotal * valorHoraOrdinaria * Constants.FACTOR_RECARGO_NOCTURNO_DOM_FEST
 
-        // 3. Base para Seguridad Social (Solo incluye ingresos constitutivos de salario: Salario base + Extras + Recargos + Bonificaciones)
+        // 3. Base para Seguridad Social (Salario base + Extras quincena anterior + Recargos quincena anterior + Bonificaciones)
         val baseCotizacion = salarioQuincenal + totalExtra + totalRecargos + bonificaciones
         
         // 4. Deducciones de Ley (Salud 4%, Pensión 4%, Fondo de Solidaridad Pensional 1% si es >= 4 SMMLV)
@@ -362,16 +421,26 @@ class NominaViewModel(
         val deduccionExtraUsuario = state.otrasDeducciones.toDoubleOrNull() ?: 0.0
         val totalDeducciones = deduccionSalud + deduccionPension + deduccionFsp + deduccionExtraUsuario
 
-        // 5. Auxilio de Transporte (No hace parte de la base para aportes a seguridad social)
-        // Por ley (Colombia), se recibe si el salario ordinario es <= 2 SMMLV.
+        // 5. Auxilio de Transporte
         val aplicaAuxilioLegalmente = salarioMensual > 0 && salarioMensual <= (Constants.SALARIO_MINIMO_2026 * 2)
         val auxilioTransporte = if (aplicaAuxilioLegalmente) Constants.AUXILIO_TRANSPORTE_2026 / 2 else 0.0
 
-        // 6. GRAN TOTAL NETO
+        // 6. GRAN TOTAL NETO A COBRAR HOY
         val granTotalNeto = baseCotizacion + auxilioTransporte - totalDeducciones
 
-        // 7. Proyección Próximo Pago (Horas de esta quincena antes de deducciones)
-        val proximoCobroProyectado = totalExtra + totalRecargos
+        // 7. Proyección Próximo Pago (Horas Malla Quincena Actual)
+        var extraProyectado = 0.0
+        extraProyectado += state.calcExtraDiurnaTurnos * valorHoraOrdinaria * Constants.FACTOR_EXTRA_DIURNA
+        extraProyectado += state.calcExtraNocturnaTurnos * valorHoraOrdinaria * Constants.FACTOR_EXTRA_NOCTURNA
+        extraProyectado += state.calcExtraDiurnaDomFestTurnos * valorHoraOrdinaria * Constants.FACTOR_EXTRA_DIURNA_DOM_FEST
+        extraProyectado += state.calcExtraNocturnaDomFestTurnos * valorHoraOrdinaria * Constants.FACTOR_EXTRA_NOCTURNA_DOM_FEST
+
+        var recargoProyectado = 0.0
+        recargoProyectado += state.calcRecargoNocturnoTurnos * valorHoraOrdinaria * Constants.FACTOR_RECARGO_NOCTURNO
+        recargoProyectado += state.calcRecargoDomFestTurnos * valorHoraOrdinaria * Constants.FACTOR_RECARGO_DOM_FEST
+        recargoProyectado += state.calcRecargoNocturnoDomFestTurnos * valorHoraOrdinaria * Constants.FACTOR_RECARGO_NOCTURNO_DOM_FEST
+
+        val proximoCobroProyectado = extraProyectado + recargoProyectado
         val fechaProximoCobro = if (state.esPago15) "30 de ${state.mesAnio}" else "15 del próximo mes"
 
         _uiState.update {

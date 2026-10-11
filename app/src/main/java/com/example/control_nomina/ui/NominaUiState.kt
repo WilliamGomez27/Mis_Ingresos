@@ -26,7 +26,7 @@ data class NominaUiState(
     val recargoDomFest: String = "",
     val recargoNocturnoDomFest: String = "",
 
-    // Outputs de turnos
+    // Outputs de turnos quincena actual (se proyectan para el próximo pago)
     val turnosActuales: List<TurnoRecord> = emptyList(),
     val calcExtraDiurnaTurnos: Double = 0.0,
     val calcExtraNocturnaTurnos: Double = 0.0,
@@ -35,6 +35,17 @@ data class NominaUiState(
     val calcRecargoNocturnoTurnos: Double = 0.0,
     val calcRecargoDomFestTurnos: Double = 0.0,
     val calcRecargoNocturnoDomFestTurnos: Double = 0.0,
+
+    // Outputs de turnos quincena anterior (se cobran en este pago)
+    val turnosQuincenaAnterior: List<TurnoRecord> = emptyList(),
+    val quincenaAnteriorNombre: String = "",
+    val cobroExtraDiurnaTurnos: Double = 0.0,
+    val cobroExtraNocturnaTurnos: Double = 0.0,
+    val cobroExtraDiurnaDomFestTurnos: Double = 0.0,
+    val cobroExtraNocturnaDomFestTurnos: Double = 0.0,
+    val cobroRecargoNocturnoTurnos: Double = 0.0,
+    val cobroRecargoDomFestTurnos: Double = 0.0,
+    val cobroRecargoNocturnoDomFestTurnos: Double = 0.0,
 
     // Outputs (Resultados calculados)
     val totalSalarioQuincenal: Double = 0.0,
