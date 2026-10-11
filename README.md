@@ -61,34 +61,3 @@ Para ejecutar las pruebas desde Android Studio o terminal:
 ```bash
 ./gradlew test
 ```
-
----
-
-## 📦 Configuración del Proyecto en Git
-
-Para iniciar un repositorio Git y guardar los cambios del proyecto:
-
-1. Iniciar el repositorio local:
-   ```bash
-   git init
-   ```
-2. Agregar todos los archivos al área de preparación (stage):
-   ```bash
-   git add .
-   ```
-3. Realizar el primer commit:
-   ```bash
-   git commit -m "feat: Versión inicial de Mis Ingresos - Control de Nómina Colombia"
-   ```
-4. Vincular con un repositorio remoto (GitHub / GitLab / Bitbucket):
-   ```bash
-   git remote add origin <URL_DE_TU_REPOSITORIO>
-   git branch -M main
-   git push -u origin main
-   ```
-
----
-
-## 📄 Licencia
-
-Desarrollado como solución nativa para el control financiero laboral en Colombia.
