@@ -47,7 +47,7 @@ fun calcularSalidaAuto(entradaStr: String, duracionHorasStr: String): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MallaTurnosScreen(viewModel: NominaViewModel, onNavigateBack: () -> Unit) {
+fun MallaTurnosScreen(viewModel: NominaViewModel) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
@@ -145,12 +145,7 @@ fun MallaTurnosScreen(viewModel: NominaViewModel, onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Malla de Turnos", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    TextButton(onClick = onNavigateBack) {
-                        Text("< Volver")
-                    }
-                }
+                title = { Text("Malla de Turnos", fontWeight = FontWeight.Bold) }
             )
         }
     ) { innerPadding ->

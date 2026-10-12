@@ -15,7 +15,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistorialScreen(viewModel: NominaViewModel, onNavigateBack: () -> Unit) {
+fun HistorialScreen(viewModel: NominaViewModel) {
     val quincenas by viewModel.historialQuincenas.collectAsState(initial = emptyList())
     val formatoMoneda = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
     formatoMoneda.maximumFractionDigits = 0
@@ -23,12 +23,7 @@ fun HistorialScreen(viewModel: NominaViewModel, onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Historial de Pagos") },
-                navigationIcon = {
-                    TextButton(onClick = onNavigateBack) {
-                        Text("< Volver")
-                    }
-                }
+                title = { Text("Historial de Pagos", fontWeight = FontWeight.Bold) }
             )
         }
     ) { innerPadding ->

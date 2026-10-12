@@ -65,7 +65,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NominaScreen(viewModel: NominaViewModel, onNavigateToHistorial: () -> Unit, onNavigateToTurnos: () -> Unit) {
+fun NominaScreen(viewModel: NominaViewModel) {
     val state by viewModel.uiState.collectAsState()
     val formatoMoneda = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
     formatoMoneda.maximumFractionDigits = 0
@@ -82,35 +82,6 @@ fun NominaScreen(viewModel: NominaViewModel, onNavigateToHistorial: () -> Unit, 
                     )
                 }
             )
-        },
-        floatingActionButton = {
-            var menuExpanded by remember { mutableStateOf(false) }
-            Box {
-                FloatingActionButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menú")
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Malla de Turnos") },
-                        onClick = {
-                            menuExpanded = false
-                            onNavigateToTurnos()
-                        },
-                        leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Historial de Pagos") },
-                        onClick = {
-                            menuExpanded = false
-                            onNavigateToHistorial()
-                        },
-                        leadingIcon = { Icon(Icons.Default.List, contentDescription = null) }
-                    )
-                }
-            }
         }
     ) { innerPadding ->
         Column(

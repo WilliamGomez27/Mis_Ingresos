@@ -4,7 +4,32 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.runtime.getValue
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -56,26 +81,88 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val viewModel: NominaViewModel = viewModel(factory = factory)
                     val navController = rememberNavController()
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentDestination = navBackStackEntry?.destination
 
-                    NavHost(navController = navController, startDestination = "calculadora") {
-                        composable("calculadora") {
-                            NominaScreen(
-                                viewModel = viewModel,
-                                onNavigateToHistorial = { navController.navigate("historial") },
-                                onNavigateToTurnos = { navController.navigate("turnos") }
-                            )
+                    Scaffold(
+                        bottomBar = {
+                            NavigationBar {
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.Assessment, contentDescription = "Calculadora") },
+                                    label = { Text("Calculadora") },
+                                    selected = currentDestination?.hierarchy?.any { it.route == "calculadora" } == true,
+                                    onClick = {
+                                        navController.navigate("calculadora") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.DateRange, contentDescription = "Turnos") },
+                                    label = { Text("Turnos") },
+                                    selected = currentDestination?.hierarchy?.any { it.route == "turnos" } == true,
+                                    onClick = {
+                                        navController.navigate("turnos") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.History, contentDescription = "Historial") },
+                                    label = { Text("Historial") },
+                                    selected = currentDestination?.hierarchy?.any { it.route == "historial" } == true,
+                                    onClick = {
+                                        navController.navigate("historial") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = "Ajustes") },
+                                    label = { Text("Ajustes") },
+                                    selected = currentDestination?.hierarchy?.any { it.route == "ajustes" } == true,
+                                    onClick = {
+                                        navController.navigate("ajustes") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                )
+                            }
                         }
-                        composable("historial") {
-                            HistorialScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable("turnos") {
-                            MallaTurnosScreen(
-                                viewModel = viewModel,
-                                onNavigateBack = { navController.popBackStack() }
-                            )
+                    ) { innerPadding ->
+                        NavHost(
+                            navController = navController, 
+                            startDestination = "calculadora",
+                            modifier = Modifier.padding(innerPadding)
+                        ) {
+                            composable("calculadora") {
+                                NominaScreen(viewModel = viewModel)
+                            }
+                            composable("historial") {
+                                HistorialScreen(viewModel = viewModel)
+                            }
+                            composable("turnos") {
+                                MallaTurnosScreen(viewModel = viewModel)
+                            }
+                            composable("ajustes") {
+                                com.example.control_nomina.ui.AjustesScreen(viewModel)
+                            }
                         }
                     }
                 }
