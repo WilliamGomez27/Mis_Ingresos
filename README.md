@@ -19,16 +19,24 @@ Incluye reconocimiento inteligente mediante **Inteligencia Artificial On-Device 
   * Detección automática de horas de entrada, salida y días libres.
   * Auto-cálculo de hora de salida al marcar hora de entrada según la duración configurada del turno (ej. +9.15h).
   * Botones de marcaje rápido en tiempo real (*"Entrada Ahora"* / *"Salida Ahora"*).
+* **Configuración Dinámica:**
+  * Bonificaciones ocasionales libres por quincena.
+  * Selector dinámico del Divisor de Horas Semanales (210, 220, 230 o 240 horas).
+  * Horario personalizable para el inicio de la noche (20:00, 21:00, etc.).
 * **Calendario de Festivos de Colombia (Ley Emiliani):**
   * Base de datos integrada con los **18 días festivos oficiales de Colombia para 2026**.
   * Detección automática de festivos nacionales y dominicales con alertas visuales destacadas (*"🎉 ¡Día Festivo Oficial en Colombia!"*).
-* **Gestión e Historial (Offline First):**
-  * Persistencia local 100% privada en **Room Database** (los datos nunca salen del teléfono).
+* **Gestión, Sincronización e Historial (Offline First):**
+  * Persistencia local 100% privada en **Room Database** y `SharedPreferences` (los datos nunca salen del teléfono).
+  * Aislamiento total de datos por quincena (las quincenas mantienen sus propias horas y novedades separadas de forma segura).
+  * Herramienta de **Sincronización JSON (Exportar/Importar)** para respaldar, mover a otro teléfono o integrar con versiones web.
   * Pantalla de Historial de Pagos guardados.
   * Exportación y compartición de Tirilla de Pago en texto plano a través de WhatsApp, Correo o cualquier aplicación.
 * **Diseño e Interfaz Moderna:**
   * Interfaz adaptativa **Edge-to-Edge** (Material Design 3).
-  * Botón de menú flotante inferior (FAB) y tarjetas interactivas de desglose en tiempo real.
+  * **Barra de Navegación Inferior (Bottom Navigation)** con pestañas aisladas (*Calculadora, Turnos, Historial, Ajustes*).
+  * Icono de aplicación profesional nativo en formato Adaptive Icon.
+  * Animaciones de desvanecimiento e indicadores reactivos al interactuar con las tarjetas y modificar valores numéricos.
   * Tema corporativo financiero (Verde Esmeralda / Teal) con soporte para modo claro y modo oscuro.
 
 ---
@@ -39,6 +47,7 @@ Incluye reconocimiento inteligente mediante **Inteligencia Artificial On-Device 
 * **UI Framework:** Jetpack Compose (Material 3)
 * **Arquitectura:** MVVM (Model-View-ViewModel) + Unidirectional Data Flow (StateFlow)
 * **Base de Datos:** Room Persistence Library (Versión 2 con soporte de migraciones)
+* **Serialización:** GSON (para respaldos e importaciones).
 * **Vision / IA:** Google ML Kit Text Recognition (Procesamiento 100% On-Device sin necesidad de internet)
 * **Navegación:** Jetpack Navigation Compose
 * **Asincronía:** Kotlin Coroutines & Flow
