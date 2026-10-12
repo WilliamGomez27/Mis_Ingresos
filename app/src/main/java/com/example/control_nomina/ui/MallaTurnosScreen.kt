@@ -334,7 +334,6 @@ fun MallaTurnosScreen(viewModel: NominaViewModel) {
                         onClick = {
                             if (fecha.isNotBlank() && entrada.isNotBlank() && salida.isNotBlank()) {
                                 viewModel.guardarTurno(fecha, entrada, salida, esFestivo)
-                                esFestivo = false
                             }
                         },
                         modifier = Modifier
@@ -351,7 +350,11 @@ fun MallaTurnosScreen(viewModel: NominaViewModel) {
             if (state.turnosActuales.isEmpty()) {
                 Text("No has registrado turnos en esta quincena.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
                     items(state.turnosActuales) { turno ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -364,12 +367,16 @@ fun MallaTurnosScreen(viewModel: NominaViewModel) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(turno.fecha, fontWeight = FontWeight.Bold)
-                                    Text("${turno.horaEntrada} - ${turno.horaSalida}${if (turno.esFestivo) " (Festivo/Dominical)" else ""}", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = "${turno.horaEntrada} - ${turno.horaSalida}${if (turno.esFestivo) " (Festivo/Dominical)" else ""}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (turno.esFestivo) Color(0xFFE65100) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                                 IconButton(onClick = { viewModel.eliminarTurno(turno) }) {
-                                    Text("X", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                    Text("X", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
                                 }
                             }
                         }
