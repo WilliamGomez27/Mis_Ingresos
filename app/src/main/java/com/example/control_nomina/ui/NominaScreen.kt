@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -237,6 +238,40 @@ fun TotalNetoCard(state: NominaUiState, viewModel: NominaViewModel) {
                 }
             }
             
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // REPLICA HTML: Barra visual de proporción de ingresos vs deducciones
+            val devengado = state.totalSalarioQuincenal + state.totalHorasExtra + state.totalRecargos + state.totalAuxilioTransporte + (state.bonificaciones.toDoubleOrNull() ?: 0.0)
+            val base = if (devengado > 0.0) devengado else 1.0 // Para evitar división por cero
+            
+            val pctSalario = (state.totalSalarioQuincenal / base).toFloat()
+            val pctExtras = ((state.totalHorasExtra + state.totalRecargos + (state.bonificaciones.toDoubleOrNull() ?: 0.0)) / base).toFloat()
+            val pctAux = (state.totalAuxilioTransporte / base).toFloat()
+            val pctDed = (state.totalDeducciones / base).toFloat()
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Devengado: ${formatoMoneda.format(devengado)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Text(text = "Deducciones: ${formatoMoneda.format(state.totalDeducciones)}", style = MaterialTheme.typography.labelSmall, color = Color(0xFFef4444))
+            }
+            
+            Spacer(modifier = Modifier.height(6.dp))
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .background(Color.Black.copy(alpha = 0.2f), RoundedCornerShape(5.dp)),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (pctSalario > 0f) Box(modifier = Modifier.weight(pctSalario).fillMaxHeight().background(Color(0xFF3b82f6), RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp)))
+                if (pctExtras > 0f) Box(modifier = Modifier.weight(pctExtras).fillMaxHeight().background(Color(0xFF10b981)))
+                if (pctAux > 0f) Box(modifier = Modifier.weight(pctAux).fillMaxHeight().background(Color(0xFF06b6d4)))
+                if (pctDed > 0f) Box(modifier = Modifier.weight(pctDed).fillMaxHeight().background(Color(0xFFef4444), RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp)))
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
             
             TextButton(
