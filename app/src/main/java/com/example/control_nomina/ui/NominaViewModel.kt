@@ -56,6 +56,7 @@ class NominaViewModel(
         val duracionTurno = prefs.getString("${prefix}_configDuracionTurno", "9.15") ?: "9.15"
         val descansoMin = prefs.getString("${prefix}_configDescansoMinutos", "30") ?: "30"
         val inicioNocturno = prefs.getString("${prefix}_configInicioNocturno", "20") ?: "20"
+        val divisorH = prefs.getString("global_divisorHoras", "210") ?: "210"
         
         val heDiurna = prefs.getString("${prefix}_horasExtraDiurna", "") ?: ""
         val heNocturna = prefs.getString("${prefix}_horasExtraNocturna", "") ?: ""
@@ -75,6 +76,7 @@ class NominaViewModel(
                 configDuracionTurno = duracionTurno,
                 configDescansoMinutos = descansoMin,
                 configInicioNocturno = inicioNocturno,
+                divisorHoras = divisorH,
                 horasExtraDiurna = heDiurna,
                 horasExtraNocturna = heNocturna,
                 horasExtraDiurnaDomFest = heDiurnaFest,
@@ -102,6 +104,7 @@ class NominaViewModel(
             .putString("${prefix}_configDuracionTurno", state.configDuracionTurno)
             .putString("${prefix}_configDescansoMinutos", state.configDescansoMinutos)
             .putString("${prefix}_configInicioNocturno", state.configInicioNocturno)
+            .putString("global_divisorHoras", state.divisorHoras)
             .putString("${prefix}_horasExtraDiurna", state.horasExtraDiurna)
             .putString("${prefix}_horasExtraNocturna", state.horasExtraNocturna)
             .putString("${prefix}_horasExtraDiurnaDomFest", state.horasExtraDiurnaDomFest)
@@ -197,6 +200,12 @@ class NominaViewModel(
         _uiState.update { it.copy(configInicioNocturno = hora, isSaved = false) }
         guardarEstadoActual()
         recalcularHorasDeTurnos()
+        recalcularNomina()
+    }
+
+    fun updateDivisorHoras(divisor: String) {
+        _uiState.update { it.copy(divisorHoras = divisor, isSaved = false) }
+        guardarEstadoActual()
         recalcularNomina()
     }
 
@@ -402,8 +411,9 @@ class NominaViewModel(
         val state = _uiState.value
         
         val salarioMensual = state.salarioMensualBase.toDoubleOrNull() ?: 0.0
+        val divisor = state.divisorHoras.toDoubleOrNull() ?: 210.0
         val salarioQuincenal = salarioMensual / 2
-        val valorHoraOrdinaria = salarioMensual / Constants.HORAS_MENSUALES
+        val valorHoraOrdinaria = salarioMensual / divisor
         val bonificaciones = state.bonificaciones.toDoubleOrNull() ?: 0.0
         
         // 1. Horas Extra A Cobrar Hoy (Suma manuales + turnos quincena anterior)

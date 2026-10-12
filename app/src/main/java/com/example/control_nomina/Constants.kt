@@ -6,9 +6,7 @@ object Constants {
     const val SALARIO_MINIMO_2026 = 1750905.0
     const val AUXILIO_TRANSPORTE_2026 = 249095.0 // Valor Mensual Oficial 2026
     
-    // Jornada laboral
     const val HORAS_SEMANALES = 42
-    const val HORAS_MENSUALES = 210 // 42h * 5 semanas comerciales
 
     // Multiplicadores Horas Extra y Recargos (Art. 168 CST Colombia)
     const val FACTOR_EXTRA_DIURNA = 1.25

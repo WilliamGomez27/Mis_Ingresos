@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -369,13 +373,14 @@ fun InfoDetalleCard(state: NominaUiState) {
     val formatoMoneda = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
     formatoMoneda.maximumFractionDigits = 0
     val salMensual = state.salarioMensualBase.toDoubleOrNull() ?: 0.0
-    val valorHora = salMensual / Constants.HORAS_MENSUALES
+    val divisorHoras = state.divisorHoras.toDoubleOrNull() ?: 210.0
+    val valorHora = salMensual / divisorHoras
 
     val (titulo, descripcion) = when (state.selectedTab) {
         "base" -> Pair(
             "Salario quincenal",
             "Mitad de tu salario mensual (${formatoMoneda.format(salMensual)}), pagada cada 15 y 30.\n\n" +
-            "• Valor de tu hora ordinaria: ${formatoMoneda.format(valorHora)} (salario ÷ ${Constants.HORAS_MENSUALES} h, jornada de 42 h).\n" +
+            "• Valor de tu hora ordinaria: ${formatoMoneda.format(valorHora)} (salario ÷ ${state.divisorHoras} h, jornada de ${if (state.divisorHoras == "210") "42" else "48"} h).\n" +
             "• Salario mínimo 2026: ${formatoMoneda.format(Constants.SALARIO_MINIMO_2026)}" +
             if ((state.bonificaciones.toDoubleOrNull() ?: 0.0) > 0) "\n• Bonificación salarial: ${formatoMoneda.format(state.bonificaciones.toDoubleOrNull() ?: 0.0)}" else ""
         )
@@ -428,6 +433,7 @@ fun InfoDetalleCard(state: NominaUiState) {
 
 @Composable
 fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
+    val focusManager = LocalFocusManager.current
     Column {
         Text("Configuración de Ingresos", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
@@ -435,14 +441,16 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.salarioMensualBase,
                 onValueChange = { viewModel.updateSalarioBase(it) },
                 label = { Text("Salario mensual ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
             OutlinedTextField(
                 value = state.bonificaciones,
                 onValueChange = { viewModel.updateBonificaciones(it) },
                 label = { Text("Bonificaciones ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -451,7 +459,8 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.otrasDeducciones,
                 onValueChange = { viewModel.updateOtrasDeducciones(it) },
                 label = { Text("Otras deducciones ($)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -472,14 +481,16 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.configDuracionTurno,
                 onValueChange = { viewModel.updateConfigTurno(it) },
                 label = { Text("Horas x Turno (ej. 9.15)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
             OutlinedTextField(
                 value = state.configDescansoMinutos,
                 onValueChange = { viewModel.updateConfigDescanso(it) },
                 label = { Text("Descanso (min)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -488,7 +499,16 @@ fun AjustesForm(state: NominaUiState, viewModel: NominaViewModel) {
                 value = state.configInicioNocturno,
                 onValueChange = { viewModel.updateConfigInicioNocturno(it) },
                 label = { Text("Hora inicio noche (0-23)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = state.divisorHoras,
+                onValueChange = { viewModel.updateDivisorHoras(it) },
+                label = { Text("Divisor (ej. 210)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -521,11 +541,13 @@ fun HorasTrabajadasForm(state: NominaUiState, viewModel: NominaViewModel) {
 
 @Composable
 fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier = Modifier) {
+    val focusManager = LocalFocusManager.current
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Next) }),
         modifier = modifier
     )
 }

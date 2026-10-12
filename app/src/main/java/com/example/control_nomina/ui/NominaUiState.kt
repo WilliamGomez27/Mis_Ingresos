@@ -16,6 +16,7 @@ data class NominaUiState(
     val configDuracionTurno: String = "9.15",
     val configDescansoMinutos: String = "30",
     val configInicioNocturno: String = "20",
+    val divisorHoras: String = "210", // 210 = 42h, 220 = 44h, 230 = 46h, 240 = 48h
 
     // Inputs (Horas manuales)
     val horasExtraDiurna: String = "",
